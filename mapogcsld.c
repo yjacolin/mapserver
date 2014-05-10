@@ -4867,7 +4867,11 @@ char *msSLDBuildFilterEncoding(FilterEncodingNode *psNode)
 
   if (!psNode)
     return NULL;
-
+/* YJN Test 
+  snprintf(szTmp, sizeof(szTmp), "<ogc:%s><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:%s>",
+             psNode->pszValue, psNode->psLeftNode->pszValue, psNode->psRightNode->pszValue, psNode->pszValue);
+  pszExpression = msStrdup(szTmp);
+ YJN to delete return msStrdup("<ogc:PropertyIsEqualTo><ogc:PropertyName>type</ogc:PropertyName><ogc:Literal>primary</ogc:Literal></ogc:PropertyIsEqualTo>"); */
   if (psNode->eType == FILTER_NODE_TYPE_COMPARISON &&
       psNode->pszValue && psNode->psLeftNode && psNode->psLeftNode->pszValue &&
       psNode->psRightNode && psNode->psRightNode->pszValue) {
@@ -5114,12 +5118,20 @@ char *msSLDGetFilter(classObj *psClass, const char *pszWfsFilter)
         pszFilter = msStrdup(szBuffer);
       }
     } else if (psClass->expression.type == MS_EXPRESSION) {
-      pszFilter = msSLDParseLogicalExpression(psClass->expression.string,
-                                              pszWfsFilter);
-    } else if (psClass->expression.type == MS_REGEX) {
+      if (psClass->layer && psClass->layer->classitem) {
+        pszFilter = msSLDParseLogicalExpression(psClass->expression.string,
+                                                pszWfsFilter);
+      } else {
+        /** TODO YJN: where ("[TYPE]" IN "primary, primary_link") is used **/
+        /** Not working if CLASSITEM is set up and if FILTER use a different attribute name for the filter **/
+        snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:PropertyIsEqualTo><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsEqualTo></ogc:Filter>\n",
+                    psClass->layer->classitem, psClass->expression.string);
+        pszFilter = msStrdup(szBuffer);
+      }
+   } else if (psClass->expression.type == MS_REGEX || psClass->expression.type == MS_LIST) {
       if (psClass->layer && psClass->layer->classitem && psClass->expression.string) {
         pszOgcFilter = msSLDConvertRegexExpToOgcIsLike(psClass->expression.string);
-
+        /** TODO YJN: Loop into different values for more complexe comparison (primary,primary_trun) or (primary|primary_trunk) **/
         if (pszWfsFilter)
           snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:And>%s<ogc:PropertyIsLike wildCard=\"*\" singleChar=\".\" escape=\"\\\"><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsLike></ogc:And></ogc:Filter>\n",
                    pszWfsFilter, psClass->layer->classitem, pszOgcFilter);
@@ -5130,6 +5142,12 @@ char *msSLDGetFilter(classObj *psClass, const char *pszWfsFilter)
         free(pszOgcFilter);
 
         pszFilter = msStrdup(szBuffer);
+      } else {
+        /** TODO YJN: where ("[TYPE]" IN "primary, primary_link") is used **/
+        snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:PropertyIsLike wildCard=\"*\" singleChar=\".\" escape=\"\\\"><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsLike></ogc:Filter>\n",
+                   psClass->layer->classitem, pszOgcFilter);
+       free(pszOgcFilter);
+       pszFilter = msStrdup(szBuffer);
       }
     }
   } else if (pszWfsFilter) {
