@@ -4271,6 +4271,8 @@ char *msSLDGetComparisonValue(char *pszExpression)
 
   if (strstr(pszExpression, "<=") || strstr(pszExpression, " le "))
     pszValue = msStrdup("PropertyIsLessThanOrEqualTo");
+  else if (strstr(pszExpression, " in "))
+    pszValue = msStrdup("PropertyIsEqualTo");
   else if (strstr(pszExpression, "=~"))
     pszValue = msStrdup("PropertyIsLike");
   else if (strstr(pszExpression, "~*"))
@@ -4463,10 +4465,9 @@ char *msSLDGetAttributeNameOrValue(char *pszExpression,
   char *pszAttributeName = NULL;
   char *pszAttributeValue = NULL;
   char cCompare = '=';
-  char szCompare[3] = {0};
-  char szCompare2[3] = {0};
+  char szCompare[3][3] = {{0}};
   int bOneCharCompare = -1, nTokens = 0, nLength =0;
-  int iValue=0, i=0, iValueIndex =0;
+  int iValue=0, i=0, j=0, iValueIndex =0;
   int bStartCopy=0, iAtt=0;
   char *pszFinalAttributeName=NULL, *pszFinalAttributeValue=NULL;
   int bSingleQuote = 0, bDoubleQuote = 0;
@@ -4474,88 +4475,97 @@ char *msSLDGetAttributeNameOrValue(char *pszExpression,
   if (!pszExpression || !pszComparionValue || strlen(pszExpression) <=0)
     return NULL;
 
-  szCompare[0] = '\0';
-  szCompare2[0] = '\0';
-
+  szCompare[0][0] = '\0';
 
   if (strcasecmp(pszComparionValue, "PropertyIsEqualTo") == 0) {
     cCompare = '=';
-    szCompare[0] = 'e';
-    szCompare[1] = 'q';
-    szCompare[2] = '\0';
-
     bOneCharCompare =1;
-  }
-  if (strcasecmp(pszComparionValue, "PropertyIsNotEqualTo") == 0) {
-    szCompare[0] = 'n';
-    szCompare[1] = 'e';
-    szCompare[2] = '\0';
+    
+    szCompare[0][0] = 'e';
+    szCompare[0][1] = 'q';
+    szCompare[0][2] = '\0';
+    
+    szCompare[1][0] = 'i';
+    szCompare[1][1] = 'n';
+    szCompare[1][2] = '\0';
 
-    szCompare2[0] = '!';
-    szCompare2[1] = '=';
-    szCompare2[2] = '\0';
+  } else if (strcasecmp(pszComparionValue, "PropertyIsNotEqualTo") == 0) {
+    szCompare[0][0] = 'n';
+    szCompare[0][1] = 'e';
+    szCompare[0][2] = '\0';
+
+    szCompare[1][0] = '!';
+    szCompare[1][1] = '=';
+    szCompare[1][2] = '\0';
 
     bOneCharCompare =0;
   } else if (strcasecmp(pszComparionValue, "PropertyIsLike") == 0) {
-    szCompare[0] = '=';
-    szCompare[1] = '~';
-    szCompare[2] = '\0';
+    szCompare[0][0] = '=';
+    szCompare[0][1] = '~';
+    szCompare[0][2] = '\0';
 
-    szCompare2[0] = '~';
-    szCompare2[1] = '*';
-    szCompare2[2] = '\0';
+    szCompare[1][0] = '~';
+    szCompare[1][1] = '*';
+    szCompare[1][2] = '\0';
 
     bOneCharCompare =0;
   } else if (strcasecmp(pszComparionValue, "PropertyIsLessThan") == 0) {
     cCompare = '<';
-    szCompare[0] = 'l';
-    szCompare[1] = 't';
-    szCompare[2] = '\0';
+    szCompare[0][0] = 'l';
+    szCompare[0][1] = 't';
+    szCompare[0][2] = '\0';
     bOneCharCompare =1;
   } else if (strcasecmp(pszComparionValue, "PropertyIsLessThanOrEqualTo") == 0) {
-    szCompare[0] = 'l';
-    szCompare[1] = 'e';
-    szCompare[2] = '\0';
+    szCompare[0][0] = 'l';
+    szCompare[0][1] = 'e';
+    szCompare[0][2] = '\0';
 
-    szCompare2[0] = '<';
-    szCompare2[1] = '=';
-    szCompare2[2] = '\0';
+    szCompare[1][0] = '<';
+    szCompare[1][1] = '=';
+    szCompare[1][2] = '\0';
 
     bOneCharCompare =0;
   } else if (strcasecmp(pszComparionValue, "PropertyIsGreaterThan") == 0) {
     cCompare = '>';
-    szCompare[0] = 'g';
-    szCompare[1] = 't';
-    szCompare[2] = '\0';
+    szCompare[0][0] = 'g';
+    szCompare[0][1] = 't';
+    szCompare[0][2] = '\0';
     bOneCharCompare =1;
   } else if (strcasecmp(pszComparionValue, "PropertyIsGreaterThanOrEqualTo") == 0) {
-    szCompare[0] = 'g';
-    szCompare[1] = 'e';
-    szCompare[2] = '\0';
+    szCompare[0][0] = 'g';
+    szCompare[0][1] = 'e';
+    szCompare[0][2] = '\0';
 
-    szCompare2[0] = '>';
-    szCompare2[1] = '=';
-    szCompare2[2] = '\0';
+    szCompare[1][0] = '>';
+    szCompare[1][1] = '=';
+    szCompare[1][2] = '\0';
 
     bOneCharCompare =0;
   }
 
+  /* We search for 1 caracter for test operator */
   if (bOneCharCompare == 1) {
     aszValues= msStringSplit (pszExpression, cCompare, &nTokens);
+    /* we have two part, so we find 1 caracter to split the string */
     if (nTokens > 1) {
       pszAttributeName = msStrdup(aszValues[0]);
       pszAttributeValue =  msStrdup(aszValues[1]);
-    } else {
-      nLength = strlen(pszExpression);
-      pszAttributeName = (char *)malloc(sizeof(char)*(nLength+1));
-      iValue = 0;
+    } 
+  } 
+
+  /* If we have more than one character to compare or 1 character to 
+     compare without findind it in string expression:  */
+  if (bOneCharCompare == 0 || (bOneCharCompare == 1 && nTokens == 1)) {
+    /* If we search more than 1 caracter for test operator */
+    nLength = strlen(pszExpression);
+    pszAttributeName = (char *)malloc(sizeof(char)*(nLength+1));
+    iValue = 0;
+    for (j=0; j<2; j++) {
       for (i=0; i<nLength-2; i++) {
-        if (pszExpression[i] != szCompare[0] &&
-            pszExpression[i] != toupper(szCompare[0])) {
+        if (toupper(pszExpression[i]) != toupper(szCompare[j][0])) {
           pszAttributeName[iValue++] = pszExpression[i];
         } else {
-          if ((pszExpression[i+1] == szCompare[1] ||
-               pszExpression[i+1] == toupper(szCompare[1])) &&
+          if (toupper(pszExpression[i+1]) == toupper(szCompare[j][1]) &&
               (pszExpression[i+2] == ' ')) {
             iValueIndex = i+3;
             pszAttributeValue = msStrdup(pszExpression+iValueIndex);
@@ -4566,32 +4576,10 @@ char *msSLDGetAttributeNameOrValue(char *pszExpression,
         pszAttributeName[iValue] = '\0';
       }
     }
-    msFreeCharArray(aszValues, nTokens);
-  } else if (bOneCharCompare == 0) {
-    nLength = strlen(pszExpression);
-    pszAttributeName = (char *)malloc(sizeof(char)*(nLength+1));
-    iValue = 0;
-    for (i=0; i<nLength-2; i++) {
-      if ((pszExpression[i] != szCompare[0] ||
-           pszExpression[i] != toupper(szCompare[0])) &&
-          (pszExpression[i] != szCompare2[0] ||
-           pszExpression[i] != toupper(szCompare2[0])))
-
-      {
-        pszAttributeName[iValue++] = pszExpression[i];
-      } else {
-        if (((pszExpression[i+1] == szCompare[1] ||
-              pszExpression[i+1] == toupper(szCompare[1])) ||
-             (pszExpression[i+1] == szCompare2[1] ||
-              pszExpression[i+1] == toupper(szCompare2[1]))) &&
-            (pszExpression[i+2] == ' ')) {
-          iValueIndex = i+3;
-          pszAttributeValue = msStrdup(pszExpression+iValueIndex);
-          break;
-        } else
-          pszAttributeName[iValue++] = pszExpression[i];
-      }
-      pszAttributeName[iValue] = '\0';
+    /* In cas we had 1 caracter for test operation we should clean up 
+       nTokens variable */
+    if( bOneCharCompare == 1 ) {
+      msFreeCharArray(aszValues, nTokens);
     }
   }
 
@@ -4867,11 +4855,6 @@ char *msSLDBuildFilterEncoding(FilterEncodingNode *psNode)
 
   if (!psNode)
     return NULL;
-/* YJN Test 
-  snprintf(szTmp, sizeof(szTmp), "<ogc:%s><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:%s>",
-             psNode->pszValue, psNode->psLeftNode->pszValue, psNode->psRightNode->pszValue, psNode->pszValue);
-  pszExpression = msStrdup(szTmp);
- YJN to delete return msStrdup("<ogc:PropertyIsEqualTo><ogc:PropertyName>type</ogc:PropertyName><ogc:Literal>primary</ogc:Literal></ogc:PropertyIsEqualTo>"); */
   if (psNode->eType == FILTER_NODE_TYPE_COMPARISON &&
       psNode->pszValue && psNode->psLeftNode && psNode->psLeftNode->pszValue &&
       psNode->psRightNode && psNode->psRightNode->pszValue) {
@@ -4911,12 +4894,30 @@ char *msSLDParseLogicalExpression(char *pszExpression, const char *pszWfsFilter)
 {
   FilterEncodingNode *psNode = NULL;
   char *pszFLTExpression = NULL;
-  char *pszTmp = NULL;
+  char *pszTmp = NULL, szBuffer[100], tmpExpression[300];
+  int i=0, nValues = 0, nTokens = 0;
+  char **aszTokens=NULL, **aszValues=NULL;
+  char *cCompare = " in ";
 
   if (!pszExpression || strlen(pszExpression) <=0)
     return NULL;
 
-
+  //TODO for " in " operator, create virtual expression
+  /*aszTokens= msStringTokenize (pszExpression, cCompare, &nTokens, 1);
+  if( nTokens > 1) {
+    aszValues= msStringSplit (aszTokens[1], ',', &nValues);
+    for ( i=0; i<nValues; i++) {
+      snprintf(szBuffer,sizeof(szBuffer), "%s (%s eq %s)", tmpExpression, aszTokens[0], aszValues[i]);
+      if( i+1 < nValues) {
+        snprintf(tmpExpression,sizeof(tmpExpression), "%s and ", msStrdup(szBuffer));
+      } else {
+        snprintf(tmpExpression,sizeof(tmpExpression), "%s", msStrdup(szBuffer));
+      }
+    }
+    //return tmpExpression;
+    //psClass->expression.string = "[type] eq 'trunk'";
+    pszExpression = msStrdup(tmpExpression);
+  }*/
   /* psNode = BuildExpressionTree(pszExpression, NULL); */
   psNode = BuildExpressionTree(pszExpression, NULL);
 
@@ -5101,59 +5102,97 @@ char *msSLDConvertRegexExpToOgcIsLike(char *pszRegex)
 /************************************************************************/
 char *msSLDGetFilter(classObj *psClass, const char *pszWfsFilter)
 {
-  char *pszFilter = NULL;
-  char szBuffer[500];
+  char *pszFilter = NULL, *pszTmp = NULL;
+  char szBuffer[600];
   char *pszOgcFilter = NULL;
+  int i=0, nValues=1;
+  char **aszValues = NULL;
+  
+  char **aszTokens=NULL;
+  char *cCompare = " in ";
+  int j=0, nExpValues = 0, nTokens = 0;
+  char tmpExpression[600] = {'\0'};
 
   if (psClass && psClass->expression.string) {
     /* string expression */
-    if (psClass->expression.type == MS_STRING) {
+    if (psClass->expression.type == MS_STRING || psClass->expression.type == MS_LIST) {
       if (psClass->layer && psClass->layer->classitem) {
-        if (pszWfsFilter)
-          snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:And>%s<ogc:PropertyIsEqualTo><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsEqualTo></ogc:And></ogc:Filter>\n",
-                   pszWfsFilter, psClass->layer->classitem, psClass->expression.string);
-        else
-          snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:PropertyIsEqualTo><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsEqualTo></ogc:Filter>\n",
-                   psClass->layer->classitem, psClass->expression.string);
-        pszFilter = msStrdup(szBuffer);
+        /** TODO: if MS_STRING do not split with "," **/
+
+        //if (psClass->expression.type == MS_LIST) {
+          aszValues = msStringSplit(psClass->expression.string, ',', &nValues);
+        //} else {
+        //  aszValues[0] = psClass->expression.string;
+        //}
+
+        for(i=0; i<nValues;i++) {
+          if (pszWfsFilter) {
+            snprintf(szBuffer, sizeof(szBuffer), "<ogc:And>%s<ogc:PropertyIsEqualTo><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsEqualTo></ogc:And>\n",
+                     pszWfsFilter, psClass->layer->classitem, aszValues[i]);
+          } else {
+            snprintf(szBuffer, sizeof(szBuffer), "<ogc:PropertyIsEqualTo><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsEqualTo>\n",
+                     psClass->layer->classitem, aszValues[i]);
+          }
+          pszTmp = msStringConcatenate(pszTmp, szBuffer);
+        }
+        if( nValues > 1) {
+          snprintf(szBuffer, sizeof(szBuffer), "<ogc:And>%s</ogc:And>\n", pszTmp);
+          pszFilter = msStrdup(szBuffer);
+        } else {
+          pszFilter = msStrdup(pszTmp);
+        }
       }
     } else if (psClass->expression.type == MS_EXPRESSION) {
-      if (psClass->layer && psClass->layer->classitem) {
+      //TODO for " in " operator, create virtual expression.
+      aszTokens= msStringTokenize (psClass->expression.string, cCompare, &nTokens, 0);
+      //TODO: loop sur nTokens car peut avoir plusieurs in
+      if( nTokens > 1) {
+        aszValues= msStringSplit (aszTokens[1], ',', &nExpValues);
+        for ( j=0; j<nExpValues; j++) {
+          snprintf(szBuffer,sizeof(szBuffer), "%s (\"%s\" eq \"%s\")", tmpExpression, aszTokens[0], aszValues[j]);
+          if( j+1 < nExpValues) {
+            snprintf(tmpExpression,sizeof(tmpExpression), "%s &&", msStrdup(szBuffer));
+          } else {
+            snprintf(tmpExpression,sizeof(tmpExpression), "%s", msStrdup(szBuffer));
+          }
+        }
+        msSetError(MS_MISCERR, "Error on expression string! %s", "msSLDGetFilter()", tmpExpression );
+
+        pszFilter = msSLDParseLogicalExpression(tmpExpression, pszWfsFilter);
+        //psClass->expression.string = msStrdup(tmpExpression);
+      } else {
         pszFilter = msSLDParseLogicalExpression(psClass->expression.string,
                                                 pszWfsFilter);
-      } else {
-        /** TODO YJN: where ("[TYPE]" IN "primary, primary_link") is used **/
-        /** Not working if CLASSITEM is set up and if FILTER use a different attribute name for the filter **/
-        snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:PropertyIsEqualTo><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsEqualTo></ogc:Filter>\n",
-                    psClass->layer->classitem, psClass->expression.string);
-        pszFilter = msStrdup(szBuffer);
-      }
-   } else if (psClass->expression.type == MS_REGEX || psClass->expression.type == MS_LIST) {
+     }
+    } else if (psClass->expression.type == MS_REGEX) {
       if (psClass->layer && psClass->layer->classitem && psClass->expression.string) {
-        pszOgcFilter = msSLDConvertRegexExpToOgcIsLike(psClass->expression.string);
-        /** TODO YJN: Loop into different values for more complexe comparison (primary,primary_trun) or (primary|primary_trunk) **/
-        if (pszWfsFilter)
-          snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:And>%s<ogc:PropertyIsLike wildCard=\"*\" singleChar=\".\" escape=\"\\\"><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsLike></ogc:And></ogc:Filter>\n",
-                   pszWfsFilter, psClass->layer->classitem, pszOgcFilter);
-        else
-          snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:PropertyIsLike wildCard=\"*\" singleChar=\".\" escape=\"\\\"><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsLike></ogc:Filter>\n",
-                   psClass->layer->classitem, pszOgcFilter);
-
-        free(pszOgcFilter);
-
-        pszFilter = msStrdup(szBuffer);
-      } else {
-        /** TODO YJN: where ("[TYPE]" IN "primary, primary_link") is used **/
-        snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter><ogc:PropertyIsLike wildCard=\"*\" singleChar=\".\" escape=\"\\\"><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsLike></ogc:Filter>\n",
-                   psClass->layer->classitem, pszOgcFilter);
-       free(pszOgcFilter);
-       pszFilter = msStrdup(szBuffer);
+        aszValues = msStringSplit(psClass->expression.string, '|', &nValues);
+        for(i=0; i<nValues;i++) {
+          pszOgcFilter = msSLDConvertRegexExpToOgcIsLike(aszValues[i]);
+          if (pszWfsFilter) {
+            snprintf(szBuffer, sizeof(szBuffer), "<ogc:And>%s<ogc:PropertyIsLike wildCard=\"*\" singleChar=\".\" escape=\"\\\"><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsLike></ogc:And>\n",
+                     pszWfsFilter, psClass->layer->classitem, pszOgcFilter);
+          } else {
+            snprintf(szBuffer, sizeof(szBuffer), "<ogc:PropertyIsLike wildCard=\"*\" singleChar=\".\" escape=\"\\\"><ogc:PropertyName>%s</ogc:PropertyName><ogc:Literal>%s</ogc:Literal></ogc:PropertyIsLike>\n",
+                     psClass->layer->classitem, pszOgcFilter);
+          }
+          free(pszOgcFilter);
+          pszTmp = msStringConcatenate(pszTmp, szBuffer);
+        }
+        if( nValues > 1) {
+          snprintf(szBuffer, sizeof(szBuffer), "<ogc:And>%s</ogc:And>\n", pszTmp);
+          pszFilter = msStrdup(szBuffer);
+        } else {
+          pszFilter = msStrdup(pszTmp);
+        }
       }
     }
   } else if (pszWfsFilter) {
-    snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter>%s</ogc:Filter>\n", pszWfsFilter);
-    pszFilter = msStrdup(szBuffer);
+    pszFilter = msStrdup(pszWfsFilter);
   }
+  snprintf(szBuffer, sizeof(szBuffer), "<ogc:Filter>%s</ogc:Filter>\n", pszFilter);
+  pszFilter = msStrdup(szBuffer);
+ 
   return pszFilter;
 }
 
