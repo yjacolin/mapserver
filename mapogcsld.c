@@ -4558,7 +4558,7 @@ char *msSLDGetAttributeNameOrValue(char *pszExpression,
   if (bOneCharCompare == 0 || (bOneCharCompare == 1 && nTokens == 1)) {
     /* If we search more than 1 caracter for test operator */
     nLength = strlen(pszExpression);
-    pszAttributeName = (char *)malloc(sizeof(char)*(nLength+1));
+    pszAttributeName = (char *)msSmallMalloc(nLength+1);
     iValue = 0;
     for (j=0; j<2; j++) {
       for (i=0; i<nLength-2; i++) {
@@ -5136,7 +5136,7 @@ char *msSLDGetFilter(classObj *psClass, const char *pszWfsFilter)
           pszTmp = msStringConcatenate(pszTmp, szBuffer);
         }
         if( nValues > 1) {
-          snprintf(szBuffer, sizeof(szBuffer), "<ogc:And>%s</ogc:And>\n", pszTmp);
+          snprintf(szBuffer, sizeof(szBuffer), "<ogc:Or>%s</ogc:Or>\n", pszTmp);
           pszFilter = msStrdup(szBuffer);
         } else {
           pszFilter = msStrdup(pszTmp);
@@ -5151,7 +5151,7 @@ char *msSLDGetFilter(classObj *psClass, const char *pszWfsFilter)
         for ( j=0; j<nExpValues; j++) {
           snprintf(szBuffer,sizeof(szBuffer), "%s (\"%s\" eq \"%s\")", tmpExpression, aszTokens[0], aszValues[j]);
           if( j+1 < nExpValues) {
-            snprintf(tmpExpression,sizeof(tmpExpression), "%s &&", msStrdup(szBuffer));
+            snprintf(tmpExpression,sizeof(tmpExpression), "%s OR", msStrdup(szBuffer));
           } else {
             snprintf(tmpExpression,sizeof(tmpExpression), "%s", msStrdup(szBuffer));
           }
