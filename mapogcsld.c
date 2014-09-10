@@ -4902,23 +4902,6 @@ char *msSLDParseLogicalExpression(char *pszExpression, const char *pszWfsFilter)
   if (!pszExpression || strlen(pszExpression) <=0)
     return NULL;
 
-  //TODO for " in " operator, create virtual expression
-  /*aszTokens= msStringTokenize (pszExpression, cCompare, &nTokens, 1);
-  if( nTokens > 1) {
-    aszValues= msStringSplit (aszTokens[1], ',', &nValues);
-    for ( i=0; i<nValues; i++) {
-      snprintf(szBuffer,sizeof(szBuffer), "%s (%s eq %s)", tmpExpression, aszTokens[0], aszValues[i]);
-      if( i+1 < nValues) {
-        snprintf(tmpExpression,sizeof(tmpExpression), "%s and ", msStrdup(szBuffer));
-      } else {
-        snprintf(tmpExpression,sizeof(tmpExpression), "%s", msStrdup(szBuffer));
-      }
-    }
-    //return tmpExpression;
-    //psClass->expression.string = "[type] eq 'trunk'";
-    pszExpression = msStrdup(tmpExpression);
-  }*/
-  /* psNode = BuildExpressionTree(pszExpression, NULL); */
   psNode = BuildExpressionTree(pszExpression, NULL);
 
   if (psNode) {
